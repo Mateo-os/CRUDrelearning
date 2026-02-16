@@ -6,6 +6,9 @@ from app.services.task_services import (
     update_task,
     delete_task
 )
+from app.schemas import TaskSchema
+
+task_schema = TaskSchema()
 
 def register_routes(app):
 
@@ -13,8 +16,9 @@ def register_routes(app):
     def create():
         data = request.get_json()
 
-        if not data or "title" not in data:
-            return jsonify({"error": "Title is required"}), 400
+        errors = task_schema.validate(data)
+        if errors:
+            return jsonify(errors), 400
         
         task = create_task(data["title"])
         return jsonify(task.to_dict(),201)
