@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.task_services import (
     create_task,
     get_tasks,
@@ -12,6 +13,7 @@ task_schema = TaskSchema()
 
 def register_routes(app):
 
+    @jwt_required()
     @app.route("/tasks",methods=["POST"])
     def create():
         data = request.get_json()
@@ -22,7 +24,7 @@ def register_routes(app):
         
         task = create_task(data["title"])
         return jsonify(task.to_dict(),201)
-        
+    
     @app.route("/tasks",methods=["GET"])
     def get_all():
         page = request.args.get("page",1,type=int)
@@ -37,6 +39,7 @@ def register_routes(app):
             "pages": pagination.pages
         })
     
+    @jwt_required()
     @app.route("/tasks/<int:task_id>",methods = ["PUT"])
     def update(task_id):
         task = get_task_by_id(task_id)
@@ -48,6 +51,7 @@ def register_routes(app):
         )
         return jsonify(updated.to_dict())
 
+    @jwt_required()
     @app.route("/tasks/<int:task_id>",methods = ["DELETE"])
     def delete(task_id):
         task = get_task_by_id(task_id)
