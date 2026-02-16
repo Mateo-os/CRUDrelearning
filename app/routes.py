@@ -1,35 +1,51 @@
 from flask import request, jsonify
-from app.database import db
-from app.models import Task
-
+from app.services.task_services import (
+    create_task,
+    get_tasks,
+    get_task_by_id,
+    update_task,
+    delete_task
+)
 
 def register_routes(app):
-   
+
     @app.route("/tasks",methods=["POST"])
-    def create_task():
+    def create():
         data = request.get_json()
-        task = Task(title=data["title"])
-        db.session.add(task)
-        db.session.commit()
+
+        if not data or "title" not in data:
+            return jsonify({"error": "Title is required"}), 400
+        
+        task = create_task(data["title"])
         return jsonify(task.to_dict(),201)
-    
+        
     @app.route("/tasks",methods=["GET"])
-    def get_tasks():
-        tasks = Task.query.all()
-        return jsonify([task.to_dict() for task in tasks])
+    def get_all():
+        page = request.args.get("page",1,type=int)
+        limit = request.args.get("limit",10,type=int)
+        
+        pagination = get_tasks(page,limit)
+        
+        return jsonify({
+            "items": [task.to_dict() for task in pagination.items],
+            "total": pagination.total,
+            "page": pagination.page,
+            "pages": pagination.pages
+        })
     
     @app.route("/tasks/<int:task_id>",methods = ["PUT"])
-    def update_task(task_id):
-        task = Task.query.get_or_404(task_id)
+    def update(task_id):
+        task = get_task_by_id(task_id)
         data = request.get_json()
-        task.title = data.get("title",task.title)
-        task.completed = data.get("completed",task.completed)
-        db.session.commit()
-        return jsonify(task.to_dict())
+        updated = update_task(
+            task,
+            title = data.get("title"),
+            completed=data.get("completed")
+        )
+        return jsonify(updated.to_dict())
 
     @app.route("/tasks/<int:task_id>",methods = ["DELETE"])
-    def delete_task(task_id):
-        task = Task.query.get_or_404(task_id)
-        db.session.delete(task)
-        db.session.commit()
+    def delete(task_id):
+        task = get_task_by_id(task_id)
+        delete_task(task)
         return jsonify({"message":"Deleted"})
